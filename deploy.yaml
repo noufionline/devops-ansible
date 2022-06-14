@@ -1,0 +1,40 @@
+---
+  - name: Deploy Systems
+    hosts: all
+    become: true
+    tasks:
+      - name: Create ansiuser
+        user:
+          state: present
+          shell: /bin/bash
+          name: ansiuser
+          password: "{{ 'ansiuser' | password_hash('sha512')}}"
+          update_password: on_create
+      - name: sudo
+        copy:
+          dest: /etc/sudoers.d/ansiuser
+          content: "ansiuser ALL=(root) NOPASSWD: ALL"
+      - name: Add master and worker nodes to host file
+        blockinfile:
+          path: /etc/hosts
+          block: |
+            {{ item.ip }} {{ item.name }}
+          marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.name }}"
+        loop:
+          - {name: master, ip: 192.168.50.2 }
+          - {name: worker1, ip: 192.168.50.3 }
+          - {name: worker2, ip: 192.168.50.4 }
+      - name: edit_sshd
+        lineinfile:
+          path: /etc/ssh/sshd_config
+          regexp: '^PasswordAuthentication'
+          line: 'PasswordAuthentication yes'
+          insertafter: '^PasswordAuthentication'
+           
+        notify: restart_sshd
+
+    handlers:
+      - name: restart_sshd
+        service:
+          name: sshd
+          state: restarted
