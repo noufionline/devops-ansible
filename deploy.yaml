@@ -3,14 +3,14 @@
     hosts: all
     become: true
     tasks:
-      - name: Create ansiuser
+      - name: Create ansiuser on worker nodes
         user:
           state: present
           shell: /bin/bash
           name: ansiuser
           password: "{{ 'ansiuser' | password_hash('sha512')}}"
           update_password: on_create
-
+      
       - name: sudo
         copy:
           dest: /etc/sudoers.d/ansiuser
@@ -33,6 +33,8 @@
           regexp: '^PasswordAuthentication'
           line: 'PasswordAuthentication yes'
           insertafter: '^PasswordAuthentication'
+          state: present
+        notify: restart_sshd
       
       - name: Add software-properties-common
         apt:
@@ -52,11 +54,7 @@
           name: ansible
           state: present
           update-cache: yes
-        when: ansible_hostname == "master"
 
-      - name: "Add worker nodes in ansible/hosts file" 
-        blockinfile:
-          path: /etc/ansible/hosts
           block: |
             {{ item }}
           marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item }}"
@@ -65,7 +63,12 @@
           - worker2
         when: ansible_hostname == "master"
 
-        notify: restart_sshd
+      - name: Set authorized key for user ubuntu copying it from current user
+        ansible.posix.authorized_key:
+          user: ansiuser
+          state: present
+          key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
+        when: ansible_hostname == "master"
 
     handlers:
       - name: restart_sshd
