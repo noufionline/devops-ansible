@@ -10,10 +10,12 @@
           name: ansiuser
           password: "{{ 'ansiuser' | password_hash('sha512')}}"
           update_password: on_create
+
       - name: sudo
         copy:
           dest: /etc/sudoers.d/ansiuser
-          content: "ansiuser ALL=(root) NOPASSWD: ALL"
+          content: "ansiuser ALL=(ALL:ALL) NOPASSWD: ALL"
+
       - name: Add master and worker nodes to host file
         blockinfile:
           path: /etc/hosts
@@ -24,13 +26,45 @@
           - {name: master, ip: 192.168.50.2 }
           - {name: worker1, ip: 192.168.50.3 }
           - {name: worker2, ip: 192.168.50.4 }
+
       - name: edit_sshd
         lineinfile:
           path: /etc/ssh/sshd_config
           regexp: '^PasswordAuthentication'
           line: 'PasswordAuthentication yes'
           insertafter: '^PasswordAuthentication'
-           
+      
+      - name: Add software-properties-common
+        apt:
+          name: software-properties-common
+          state: present
+          update-cache: yes
+        when: ansible_hostname == "master"
+          
+
+      - name: add Ansible repository on master node
+        ansible.builtin.apt_repository:
+          repo: 'ppa:ansible/ansible'
+        when: ansible_hostname == "master"
+      
+      - name: install ansible on master node
+        apt:
+          name: ansible
+          state: present
+          update-cache: yes
+        when: ansible_hostname == "master"
+
+      - name: "Add worker nodes in ansible/hosts file" 
+        blockinfile:
+          path: /etc/ansible/hosts
+          block: |
+            {{ item }}
+          marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item }}"
+        loop:
+          - worker1
+          - worker2
+        when: ansible_hostname == "master"
+
         notify: restart_sshd
 
     handlers:
