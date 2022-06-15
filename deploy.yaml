@@ -63,13 +63,6 @@
           - worker2
         when: ansible_hostname == "master"
 
-      - name: Set authorized key for user ubuntu copying it from current user
-        ansible.posix.authorized_key:
-          user: ansiuser
-          state: present
-          key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
-        when: ansible_hostname == "master"
-
     handlers:
       - name: restart_sshd
         service:
