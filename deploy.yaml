@@ -10,6 +10,20 @@
           name: ansiuser
           password: "{{ 'ansiuser' | password_hash('sha512')}}"
           update_password: on_create
+        when: ansible_hostname != "master"
+
+      - name: Create ansiuser on master nodes
+        user:
+          state: present
+          shell: /bin/bash
+          name: ansiuser
+          generate_ssh_key: yes
+          ssh_key_bits: 2048
+          ssh_key_file: .ssh/id_rsa
+          force: yes
+          password: "{{ 'ansiuser' | password_hash('sha512')}}"
+          update_password: on_create
+        when: ansible_hostname == "master"
       
       - name: sudo
         copy:
@@ -49,15 +63,30 @@
           repo: 'ppa:ansible/ansible'
         when: ansible_hostname == "master"
       
-      - name: install ansible on master node
+      - name: install {{ item }} on master node
         apt:
-          name: ansible
+          name: "{{ item }}"
           state: present
           update-cache: yes
+        loop:
+          - ansible
+          - sshpass
+        when: ansible_hostname == "master"
 
+      - name: "Add worker nodes in ansible/hosts file" 
+        blockinfile:
+          path: /etc/ansible/hosts
           block: |
             {{ item }}
           marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item }}"
+        loop:
+          - worker1
+          - worker2
+        when: ansible_hostname == "master"
+
+      - name: copy ssh key to worker nodes
+        command: "sshpass -v -p ansiuser ssh-copy-id -o StrictHostKeyChecking=no ansiuser@{{ item }}"
+        become_user: ansiuser
         loop:
           - worker1
           - worker2

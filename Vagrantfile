@@ -23,7 +23,7 @@ Vagrant.configure("2") do |config|
       ubuntu.vm.network "private_network", ip: "192.168.50.2"
       ubuntu.vm.hostname = "master"
       ubuntu.vm.provision "ansible", playbook: "deploy.yaml"
-      ubuntu.vm.provision :shell, path: "install.sh", privileged: false
+      #ubuntu.vm.provision :shell, path: "install.sh", privileged: true
   end 
 
 
