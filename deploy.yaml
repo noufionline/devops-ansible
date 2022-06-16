@@ -68,7 +68,7 @@
           name: "{{ item }}"
           state: present
           update-cache: yes
-        loop:
+        with_items:
           - ansible
           - sshpass
         when: ansible_hostname == "master"
