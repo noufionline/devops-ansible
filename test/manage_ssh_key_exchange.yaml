@@ -1,0 +1,17 @@
+---
+  - name: Manage SSH Key exchange
+    hosts: all
+    become: yes
+    tasks:
+      - name: Create SSH Key
+        openssh_keypair:
+          path: /home/ansible/.ssh/id_ecdsa
+          type: ecdsa
+          state: present
+  
+      - name: Set authorized key taken from file
+        authorized_key:
+          user: ansiuser
+          state: present
+          manage_dir: yes
+          key: "{{ lookup('file', '/home/ansiuser/.ssh/id_ecdsa.pub') }}"

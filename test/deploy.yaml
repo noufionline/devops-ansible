@@ -1,0 +1,67 @@
+---
+  - name: Deploy Systems
+    hosts: all
+    become: true
+    tasks:
+
+      - name: Add master and worker nodes to host file
+        blockinfile:
+          path: /etc/hosts
+          block: |
+            {{ item.ip }} {{ item.name }}
+          marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.name }}"
+        loop:
+          - {name: master, ip: 192.168.50.2 }
+          - {name: worker1, ip: 192.168.50.3 }
+          - {name: worker2, ip: 192.168.50.4 }
+         
+      - name: Create ansiuser on worker nodes nodes
+        user:
+          name: ansiuser
+          shell: /bin/bash
+          state: present
+          password: "{{ 'ansiuser' | password_hash('sha512') }}"
+          update_password: on_create
+        when: ansible_hostname != "master"
+   
+      - name: Create ansiuser on master node
+        user:
+          name: ansiuser
+          shell: /bin/bash
+          state: present
+          generate_ssh_key: true
+          ssh_key_file: .ssh/id_rsa
+          ssh_key_type: rsa
+          password: "{{ 'ansiuser' | password_hash('sha512') }}"
+          update_password: on_create
+        when: ansible_hostname == "master"
+
+      # - name: Set authorized key taken from file
+      #   authorized_key:
+      #     user: ansiuser
+      #     state: present
+      #     manage_dir: yes
+      #     key: "{{ lookup('file', '/home/ansiuser/.ssh/id_rsa.pub') }}" 
+      #   when: ansible_hostname == "master"
+
+      - name: Give sudo privilege to ansiuser
+        copy:
+          dest: /etc/sudoers.d/ansiuser
+          content: "ansiuser ALL=(root) NOPASSWD: ALL"
+      
+      - name: edit_sshd
+        lineinfile:
+          path: /etc/ssh/sshd_config
+          regexp: '^PasswordAuthentication'
+          line: 'PasswordAuthentication yes'
+          insertafter: '^PasswordAuthentication'
+          state: present
+        notify: restart_sshd
+
+    handlers:
+    - name: restart_sshd
+      service:
+        name: sshd
+        state: restarted
+
+ 
