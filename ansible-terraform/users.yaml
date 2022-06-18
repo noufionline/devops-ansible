@@ -1,0 +1,21 @@
+---
+ - name: User Account Management Demo
+   hosts: all 
+   become: true
+   tasks:
+        - name: Add dev  Users group
+          group:
+                name: dev
+                state: present
+        - name: Add ops Users Group
+          group:
+                name: ops
+                state: present
+
+        - name: Adding User pavan1
+          user:
+                name: pavan1
+                state: present
+                password: "{{ 'devops' | password_hash('sha512') }}"
+                groups: dev, ops
+

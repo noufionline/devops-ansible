@@ -1,0 +1,25 @@
+---
+ - name: Play 1 for Appserver
+   hosts: appserver
+   become: yes
+   tasks: 
+     - name: Install apache2 package
+       apt:
+           update_cache: yes
+           name: apache2
+           state: present
+
+     - name: Start the webserver service
+       service:
+           name: apache2
+           state: started
+
+ - name: Play 2 for dbserver group
+   hosts: dbserver
+   become: yes
+   tasks: 
+     - name: Remove user account pavan1
+       user:
+           name: pavan1
+           state: absent
+
