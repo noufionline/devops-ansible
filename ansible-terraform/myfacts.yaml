@@ -1,0 +1,15 @@
+---
+ - hosts: all
+   tasks: 
+     - debug: 
+           msg: "{{ ansible_hostname }} is my hostname"
+
+     - debug:
+             msg: "{{ ansible_default_ipv4.address }} is my IP"
+
+     - debug:
+             msg: "{{ ansible_default_ipv4.macaddress }} is my mac"
+             
+     - debug:
+             msg: "{{ ansible_date_time.tz }} is my Timezone"
+

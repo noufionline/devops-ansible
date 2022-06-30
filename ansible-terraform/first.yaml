@@ -1,0 +1,8 @@
+---
+- hosts: myinfra
+  become: yes
+  tasks:
+          - user: name=userX state=present
+          - file: name=/mydemo state=directory owner=userX mode=700
+          - copy: content="This is ansible automation" dest=/mydemo/sample.txt mode=600 owner=userX
+...
