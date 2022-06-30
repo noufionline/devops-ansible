@@ -3,15 +3,14 @@
     hosts: all
     become: yes
     tasks:
-      - name: Create SSH Key
-        openssh_keypair:
-          path: /home/ansible/.ssh/id_ecdsa
-          type: ecdsa
-          state: present
-  
+      - name: Create Directory (.ssh)
+        file:
+          dest: '/home/ansiuser/.ssh'
+          state: 'directory'
+
       - name: Set authorized key taken from file
         authorized_key:
           user: ansiuser
-          state: present
+          state: "{{ state | default('present') }}"
           manage_dir: yes
-          key: "{{ lookup('file', '/home/ansiuser/.ssh/id_ecdsa.pub') }}"
+          key: "{{ lookup('file', '/home/ansiuser/.ssh/id_rsa.pub') }}"

@@ -73,7 +73,7 @@
           - sshpass
         when: ansible_hostname == "master"
 
-      - name: "Add worker nodes in ansible/hosts file" 
+      - name: "Add worker nodes in ansible/hosts file"
         blockinfile:
           path: /etc/ansible/hosts
           block: |

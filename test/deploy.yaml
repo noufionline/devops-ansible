@@ -2,8 +2,8 @@
   - name: Deploy Systems
     hosts: all
     become: true
+    remote_user: ansiuser
     tasks:
-
       - name: Add master and worker nodes to host file
         blockinfile:
           path: /etc/hosts
@@ -14,7 +14,7 @@
           - {name: master, ip: 192.168.50.2 }
           - {name: worker1, ip: 192.168.50.3 }
           - {name: worker2, ip: 192.168.50.4 }
-         
+
       - name: Create ansiuser on worker nodes nodes
         user:
           name: ansiuser
@@ -23,7 +23,7 @@
           password: "{{ 'ansiuser' | password_hash('sha512') }}"
           update_password: on_create
         when: ansible_hostname != "master"
-   
+
       - name: Create ansiuser on master node
         user:
           name: ansiuser
@@ -36,19 +36,67 @@
           update_password: on_create
         when: ansible_hostname == "master"
 
-      # - name: Set authorized key taken from file
-      #   authorized_key:
-      #     user: ansiuser
-      #     state: present
-      #     manage_dir: yes
-      #     key: "{{ lookup('file', '/home/ansiuser/.ssh/id_rsa.pub') }}" 
-      #   when: ansible_hostname == "master"
-
       - name: Give sudo privilege to ansiuser
         copy:
           dest: /etc/sudoers.d/ansiuser
           content: "ansiuser ALL=(root) NOPASSWD: ALL"
+
+      - name: Create Directory (.ssh)
+        file:
+          dest: '/home/ansiuser/.ssh'
+          state: 'directory'
+
+      - name: Set authorized key taken from file
+        authorized_key:
+          user: ansiuser
+          state: "{{ state | default('present') }}"
+          manage_dir: yes
+          key: "{{ lookup('file', '/home/noufal/devops/linux/test/ansiuser/id_rsa.pub') }}"
+
+      - name: Set authorized key taken from file
+        copy:
+          src: "/home/noufal/devops/linux/test/ansiuser/id_rsa"
+          dest: "/home/ansiuser/.ssh/id_rsa"
+        when: ansible_hostname == "master"
+
+      - name: Set authorized key taken from file
+        copy:
+          src: "/home/noufal/devops/linux/test/ansiuser/id_rsa.pub"
+          dest: "/home/ansiuser/.ssh/id_rsa.pub"
+        when: ansible_hostname == "master"
       
+      - name: Create ansible config file
+        copy:
+          dest: "/home/ansiuser/ansible.cfg"
+          content: "[defaults]\ninventory=./inventory\nhost_key_checking=False\n"
+        when: ansible_hostname == "master"
+      
+      - name: Create inventory file
+        copy:
+          dest: "/home/ansiuser/inventory"
+          content: "[myinfra]\nworker1\nworker2\n"
+        when: ansible_hostname == "master"
+
+      - name: add ansible repository
+        apt_repository:
+          repo: "ppa:ansible/ansible"
+          update_cache: yes
+        when: ansible_hostname == "master"
+
+      - name: install ansible
+        apt:
+          name: "{{ item }}"
+        loop:
+          - software-properties-common
+          - ansible
+        when: ansible_hostname == "master"
+
+  #    - name: Copy manage_ssh_key_exchange file to master node
+  #      copy:
+  #        dest: '/home/ansiuser/manage_ssh_key_exchange.yaml'
+  #        src: 'manage_ssh_key_exchange.yaml'
+  #      when: ansible_hostname == "master"
+ 
       - name: edit_sshd
         lineinfile:
           path: /etc/ssh/sshd_config
@@ -63,5 +111,3 @@
       service:
         name: sshd
         state: restarted
-
- 
